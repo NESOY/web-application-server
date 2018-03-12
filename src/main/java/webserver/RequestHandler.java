@@ -1,10 +1,9 @@
 package webserver;
 
-import java.io.DataOutputStream;
-import java.io.IOException;
-import java.io.InputStream;
-import java.io.OutputStream;
+import java.io.*;
 import java.net.Socket;
+import java.util.regex.Matcher;
+import java.util.regex.Pattern;
 
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -24,8 +23,18 @@ public class RequestHandler extends Thread {
 
         try (InputStream in = connection.getInputStream(); OutputStream out = connection.getOutputStream()) {
             // TODO 사용자 요청에 대한 처리는 이 곳에 구현하면 된다.
+            BufferedReader bufferedReader = new BufferedReader(new InputStreamReader(in));
+            String header = bufferedReader.readLine();
+            log.info(header);
+            Matcher matcher = Pattern.compile("(.*) /(.*) (.*)").matcher(header);
+            log.info(matcher.group(1));
+            log.info(matcher.group(2));
+            log.info(matcher.group(3));
+
             DataOutputStream dos = new DataOutputStream(out);
             byte[] body = "Hello World".getBytes();
+
+
             response200Header(dos, body.length);
             responseBody(dos, body);
         } catch (IOException e) {
