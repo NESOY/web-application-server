@@ -7,9 +7,14 @@ import java.util.Map;
 
 import org.junit.Test;
 
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 import util.HttpRequestUtils.Pair;
+import webserver.RequestHandler;
 
 public class HttpRequestUtilsTest {
+    private static final Logger log = LoggerFactory.getLogger(RequestHandler.class);
+
     @Test
     public void parseQueryString() {
         String queryString = "userId=javajigi";
@@ -69,5 +74,54 @@ public class HttpRequestUtilsTest {
         String header = "Content-Length: 59";
         Pair pair = HttpRequestUtils.parseHeader(header);
         assertThat(pair, is(new Pair("Content-Length", "59")));
+    }
+
+
+    @Test
+    public void parseURLTest() {
+        //given
+        String header = "GET /index.html HTTP/1.1";
+        //when
+        String url = HttpRequestUtils.parseResourcePathURL(header);
+        //then
+        assertEquals("/index.html", url);
+
+        //given
+        header = "GET /user/form.html HTTP/1.1";
+        //when
+        url = HttpRequestUtils.parseResourcePathURL(header);
+        //then
+        assertEquals("/user/form.html", url);
+
+
+        //given
+        header = "GET /user/create?userId=nesoy&password=password&name=youngjae HTTP/1.1";
+        //when
+        url = HttpRequestUtils.parseResourcePathURL(header);
+        //then
+        assertEquals("/user/create", url);
+    }
+
+    @Test
+    public void parseUserInfoMapTest(){
+        //given
+        String header = "GET /user/create?userId=nesoy&password=password&name=youngjae HTTP/1.1";
+        //when
+        String url = HttpRequestUtils.parseResourceURL(header);
+        Map parsedMap = HttpRequestUtils.parseQueryMap(url);
+        //then
+        assertEquals("nesoy",parsedMap.get("userId"));
+        assertEquals("password",parsedMap.get("password"));
+        assertEquals("youngjae",parsedMap.get("name"));
+
+        //given
+        header = "GET /user/create HTTP/1.1";
+
+        //when
+        url = HttpRequestUtils.parseResourceURL(header);
+        parsedMap = HttpRequestUtils.parseQueryMap(url);
+
+        //then
+        assertEquals(null,parsedMap);
     }
 }
