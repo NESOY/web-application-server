@@ -105,14 +105,16 @@ public class HttpRequestUtilsTest {
     @Test
     public void parseUserInfoMapTest(){
         //given
-        String header = "GET /user/create?userId=nesoy&password=password&name=youngjae HTTP/1.1";
+        String header = "GET /user/create?userId=nesoy&password=password&name=youngjae&email=kyoje11@gmail.com HTTP/1.1";
         //when
         String url = HttpRequestUtils.parseResourceURL(header);
         Map parsedMap = HttpRequestUtils.parseQueryMap(url);
+
         //then
         assertEquals("nesoy",parsedMap.get("userId"));
         assertEquals("password",parsedMap.get("password"));
         assertEquals("youngjae",parsedMap.get("name"));
+        assertEquals("kyoje11@gmail.com",parsedMap.get("email"));
 
         //given
         header = "GET /user/create HTTP/1.1";
