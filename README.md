@@ -19,10 +19,12 @@
 
 
 ### 요구사항 2 - get 방식으로 회원가입
-* 
+- 코드의 추상화 Level이 맞지 않는 점.
+- RequestHandler에서 많은 기능을 하고 있는 점.
 
 ### 요구사항 3 - post 방식으로 회원가입
-* 
+- POST와 GET을 하나의 Handler로 다루는 방향보단 두개의 Handler로 다루는 방안?
+- Exception 처리하지 못한 점.
 
 ### 요구사항 4 - redirect 방식으로 이동
 * 
