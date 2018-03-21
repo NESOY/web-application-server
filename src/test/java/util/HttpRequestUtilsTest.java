@@ -1,16 +1,18 @@
 package util;
 
-import static org.hamcrest.CoreMatchers.*;
-import static org.junit.Assert.*;
-
-import java.util.Map;
-
+import org.junit.Assert;
 import org.junit.Test;
-
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import util.HttpRequestUtils.Pair;
 import webserver.RequestHandler;
+
+import java.util.Map;
+
+import static org.hamcrest.CoreMatchers.is;
+import static org.hamcrest.CoreMatchers.nullValue;
+import static org.junit.Assert.assertEquals;
+import static org.junit.Assert.assertThat;
 
 public class HttpRequestUtilsTest {
     private static final Logger log = LoggerFactory.getLogger(RequestHandler.class);
@@ -78,18 +80,18 @@ public class HttpRequestUtilsTest {
 
 
     @Test
-    public void parseURLTest() {
+    public void parseResourcePath() {
         //given
         String header = "GET /index.html HTTP/1.1";
         //when
-        String url = HttpRequestUtils.parseResourcePathURL(header);
+        String url = HttpRequestUtils.parseResourcePath(header);
         //then
         assertEquals("/index.html", url);
 
         //given
         header = "GET /user/form.html HTTP/1.1";
         //when
-        url = HttpRequestUtils.parseResourcePathURL(header);
+        url = HttpRequestUtils.parseResourcePath(header);
         //then
         assertEquals("/user/form.html", url);
 
@@ -97,33 +99,53 @@ public class HttpRequestUtilsTest {
         //given
         header = "GET /user/create?userId=nesoy&password=password&name=youngjae HTTP/1.1";
         //when
-        url = HttpRequestUtils.parseResourcePathURL(header);
+        url = HttpRequestUtils.parseResourcePath(header);
         //then
         assertEquals("/user/create", url);
     }
 
     @Test
-    public void parseUserInfoMapTest(){
+    public void parseMethodTest(){
         //given
-        String header = "GET /user/create?userId=nesoy&password=password&name=youngjae&email=kyoje11@gmail.com HTTP/1.1";
+        String header = "GET /user/create HTTP/1.1";
         //when
-        String url = HttpRequestUtils.parseResourceURL(header);
-        Map parsedMap = HttpRequestUtils.parseQueryMap(url);
-
+        String method = HttpRequestUtils.parseMethod(header);
         //then
-        assertEquals("nesoy",parsedMap.get("userId"));
-        assertEquals("password",parsedMap.get("password"));
-        assertEquals("youngjae",parsedMap.get("name"));
-        assertEquals("kyoje11@gmail.com",parsedMap.get("email"));
+        Assert.assertEquals("GET", method);
 
         //given
-        header = "GET /user/create HTTP/1.1";
-
+        header = "POST /user/create HTTP/1.1";
         //when
-        url = HttpRequestUtils.parseResourceURL(header);
-        parsedMap = HttpRequestUtils.parseQueryMap(url);
-
+        method = HttpRequestUtils.parseMethod(header);
         //then
-        assertEquals(null,parsedMap);
+        Assert.assertEquals("POST", method);
+    }
+
+    @Test
+    public void parseResource(){
+        //given
+        String header = "GET /user/create HTTP/1.1";
+        //when
+        String resource = HttpRequestUtils.parseResource(header);
+        //then
+        Assert.assertEquals("/user/create", resource);
+
+
+        //given
+        header = "GET /user/create?userId=nesoy&password=password&name=youngjae HTTP/1.1";
+        //when
+        resource = HttpRequestUtils.parseResource(header);
+        //then
+        Assert.assertEquals("/user/create?userId=nesoy&password=password&name=youngjae", resource);
+    }
+
+    @Test
+    public void parseQuery(){
+        //given
+        String header = "GET /user/create?userId=nesoy&password=password&name=youngjae HTTP/1.1";
+        //when
+        String query = HttpRequestUtils.parseQuery(header);
+        //then
+        Assert.assertEquals("userId=nesoy&password=password&name=youngjae", query);
     }
 }
