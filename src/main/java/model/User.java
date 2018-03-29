@@ -1,5 +1,7 @@
 package model;
 
+import java.util.Map;
+
 public class User {
     private String userId;
     private String password;
@@ -32,5 +34,14 @@ public class User {
     @Override
     public String toString() {
         return "User [userId=" + userId + ", password=" + password + ", name=" + name + ", email=" + email + "]";
+    }
+
+    public static User getUserInstance(Map<String, String> userInfoMap) {
+        String userId = userInfoMap.get("userId");
+        String password = userInfoMap.get("password");
+        String name = userInfoMap.get("name");
+        String email = userInfoMap.get("email");
+
+        return new User(userId, password, name, email);
     }
 }

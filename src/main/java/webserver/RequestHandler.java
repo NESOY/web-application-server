@@ -5,6 +5,7 @@ import java.net.Socket;
 import java.nio.file.Files;
 import java.util.Map;
 
+import db.DataBase;
 import model.User;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -22,8 +23,7 @@ public class RequestHandler extends Thread {
     }
 
     public void run() {
-        log.debug("New Client Connect! Connected IP : {}, Port : {}", connection.getInetAddress(),
-                connection.getPort());
+        log.debug("New Client Connect! Connected IP : {}, Port : {}", connection.getInetAddress(), connection.getPort());
 
         try (InputStream in = connection.getInputStream(); OutputStream out = connection.getOutputStream()) {
             BufferedReader bufferedReader = new BufferedReader(new InputStreamReader(in));
@@ -34,52 +34,13 @@ public class RequestHandler extends Thread {
             String method = HttpRequestUtils.parseMethod(line);
             String resourcePath = HttpRequestUtils.parseResourcePath(line);
 
-
-            if (method.equals("POST")) {
-                int size = 0;
-                while (!"".equals(line)) {
-                    if (line == null) {
-                        return;
-                    }
-
-                    HttpRequestUtils.Pair pair = HttpRequestUtils.parseHeader(line);
-                    if (pair != null) {
-                        if (pair.getKey().equals("Content-Length")) {
-                            size = Integer.parseInt(pair.getValue());
-
-                        }
-                    }
-
-                    line = bufferedReader.readLine();
-                }
-
-                String data = IOUtils.readData(bufferedReader, size);
-
-                Map<String, String> userInfoMap = HttpRequestUtils.parseQueryString(data);
-                User user = createUser(userInfoMap);
-                response302Header(dos, "/index.html");
-                return;
-            }
-
             if (method.equals("GET")) {
-                if (resourcePath.equals("/user/create")) {
-                    String query = HttpRequestUtils.parseQuery(line);
-                    Map<String, String> userInfoMap = HttpRequestUtils.parseQueryString(query);
-                    User user = createUser(userInfoMap);
-                    response302Header(dos, "/index.html");
-                    return;
-                }
-                byte[] body = Files.readAllBytes(new File(BASE_RESOURCE_URL + resourcePath).toPath());
-                while (!"".equals(line)) {
-                    if (line == null) {
-                        return;
-                    }
-                    line = bufferedReader.readLine();
-                }
-
-                response200Header(dos, body.length);
-                responseBody(dos, body);
+                getRequestHandle(bufferedReader, dos, resourcePath, line);
             }
+            if (method.equals("POST")) {
+                postRequestHandle(bufferedReader, dos, line);
+            }
+
 
 
         } catch (IOException e) {
@@ -118,12 +79,51 @@ public class RequestHandler extends Thread {
         }
     }
 
-    private User createUser(Map<String, String> userInfoMap) {
-        String userId = userInfoMap.get("userId");
-        String password = userInfoMap.get("password");
-        String name = userInfoMap.get("name");
-        String email = userInfoMap.get("email");
+    private void postRequestHandle(BufferedReader bufferedReader, DataOutputStream dos, String line) throws IOException {
+        int size = 0;
+        while (!"".equals(line)) {
+            if (line == null) {
+                return;
+            }
 
-        return new User(userId, password, name, email);
+            HttpRequestUtils.Pair pair = HttpRequestUtils.parseHeader(line);
+            if (pair != null) {
+                if (pair.getKey().equals("Content-Length")) {
+                    size = Integer.parseInt(pair.getValue());
+
+                }
+            }
+
+            line = bufferedReader.readLine();
+        }
+
+        String data = IOUtils.readData(bufferedReader, size);
+
+        Map<String, String> userInfoMap = HttpRequestUtils.parseQueryString(data);
+        User user = User.getUserInstance(userInfoMap);
+        DataBase.addUser(user);
+        response302Header(dos, "/index.html");
+    }
+
+    private void getRequestHandle(BufferedReader bufferedReader, DataOutputStream dos, String resourcePath, String line) throws IOException {
+        if (resourcePath.equals("/user/create")) {
+            String query = HttpRequestUtils.parseQuery(line);
+            Map<String, String> userInfoMap = HttpRequestUtils.parseQueryString(query);
+            User user = User.getUserInstance(userInfoMap);
+            DataBase.addUser(user);
+            response302Header(dos, "/index.html");
+            return;
+        }
+
+        byte[] body = Files.readAllBytes(new File(BASE_RESOURCE_URL + resourcePath).toPath());
+        while (!"".equals(line)) {
+            if (line == null) {
+                return;
+            }
+            line = bufferedReader.readLine();
+        }
+
+        response200Header(dos, body.length);
+        responseBody(dos, body);
     }
 }
