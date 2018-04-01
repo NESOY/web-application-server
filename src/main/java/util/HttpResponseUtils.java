@@ -26,4 +26,30 @@ public class HttpResponseUtils {
 
         return response.toString();
     }
+
+    public static String loginSuccess() {
+        StringBuilder response = new StringBuilder();
+
+        response.append("HTTP/1.1 302 OK \r\n");
+        response.append("Content-Type: text/html;charset=utf-8 \r\n");
+        response.append("Set-Cookie: logined=true \r\n");
+        response.append("Location: /index.html \r\n");
+        response.append("\r\n");
+
+        return response.toString();
+    }
+
+    public static String loginFail() {
+        StringBuilder response = new StringBuilder();
+
+        response.append("HTTP/1.1 302 OK \r\n");
+        response.append("Content-Type: text/html;charset=utf-8 \r\n");
+        response.append("Set-Cookie: logined=false \r\n");
+        response.append("Location: /user/login_failed.html \r\n");
+        response.append("\r\n");
+
+        return response.toString();
+    }
+
+
 }

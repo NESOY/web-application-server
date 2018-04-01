@@ -21,4 +21,13 @@ public class DataBase {
     public static Collection<User> findAll() {
         return users.values();
     }
+
+    public static boolean isSignedUser(String userId, String password) throws NullPointerException {
+        User findUser = users.get(userId);
+        if (findUser != null) {
+            return findUser.getPassword().equals(password);
+        }
+
+        return false;
+    }
 }

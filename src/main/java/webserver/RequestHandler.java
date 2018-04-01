@@ -1,5 +1,6 @@
 package webserver;
 
+import controller.UserController;
 import db.DataBase;
 import model.User;
 import org.slf4j.Logger;
@@ -21,6 +22,8 @@ public class RequestHandler extends Thread {
 
     private Socket connection;
 
+    private UserController userController = new UserController();
+
     public RequestHandler(Socket connectionSocket) {
         this.connection = connectionSocket;
     }
@@ -41,7 +44,25 @@ public class RequestHandler extends Thread {
                 getRequestHandle(bufferedReader, dos, resourcePath, line);
             }
             if (method.equals("POST")) {
-                postRequestHandle(bufferedReader, dos, line);
+                if (resourcePath.equals("/user/create")) {
+                    String data = getPostQueryString(bufferedReader, line);
+                    Map<String, String> userInfoMap = HttpRequestUtils.parseQueryString(data);
+
+                    String response = userController.create(userInfoMap);
+
+                    dos.writeBytes(response);
+                }
+
+                if (resourcePath.equals("/user/login")) {
+                    String data = getPostQueryString(bufferedReader, line);
+                    Map<String, String> userLoginInfo = HttpRequestUtils.parseQueryString(data);
+                    String userId = userLoginInfo.get("userId");
+                    String password = userLoginInfo.get("password");
+
+                    String response = userController.login(userId, password);
+
+                    dos.writeBytes(response);
+                }
             }
 
         } catch (IOException e) {
@@ -58,33 +79,6 @@ public class RequestHandler extends Thread {
         }
     }
 
-    private void postRequestHandle(BufferedReader bufferedReader, DataOutputStream dos, String line) throws IOException {
-        int size = 0;
-        while (!"".equals(line)) {
-            if (line == null) {
-                return;
-            }
-
-            HttpRequestUtils.Pair pair = HttpRequestUtils.parseHeader(line);
-            if (pair != null) {
-                if (pair.getKey().equals("Content-Length")) {
-                    size = Integer.parseInt(pair.getValue());
-
-                }
-            }
-
-            line = bufferedReader.readLine();
-        }
-
-        String data = IOUtils.readData(bufferedReader, size);
-
-        Map<String, String> userInfoMap = HttpRequestUtils.parseQueryString(data);
-        User user = User.getUserInstance(userInfoMap);
-        DataBase.addUser(user);
-        String response = response302Header("/index.html");
-
-        dos.writeBytes(response);
-    }
 
     private void getRequestHandle(BufferedReader bufferedReader, DataOutputStream dos, String resourcePath, String line) throws IOException {
         if (resourcePath.equals("/user/create")) {
@@ -109,5 +103,27 @@ public class RequestHandler extends Thread {
         String response = response200Header(body.length);
         dos.writeBytes(response);
         responseBody(dos, body);
+    }
+
+    private String getPostQueryString(BufferedReader bufferedReader, String line) throws IOException {
+        int size = 0;
+        while (!"".equals(line)) {
+            if (line == null) {
+                return "";
+            }
+
+            HttpRequestUtils.Pair pair = HttpRequestUtils.parseHeader(line);
+            if (pair != null) {
+                if (pair.getKey().equals("Content-Length")) {
+                    size = Integer.parseInt(pair.getValue());
+
+                }
+            }
+
+            line = bufferedReader.readLine();
+        }
+
+
+        return IOUtils.readData(bufferedReader, size);
     }
 }
