@@ -1,16 +1,18 @@
 package webserver;
 
-import java.io.*;
-import java.net.Socket;
-import java.nio.file.Files;
-import java.util.Map;
-
 import db.DataBase;
 import model.User;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import util.HttpRequestUtils;
 import util.IOUtils;
+
+import java.io.*;
+import java.net.Socket;
+import java.nio.file.Files;
+import java.util.Map;
+
+import static util.HttpResponseUtils.response302Header;
 
 public class RequestHandler extends Thread {
     private static final Logger log = LoggerFactory.getLogger(RequestHandler.class);
@@ -41,8 +43,6 @@ public class RequestHandler extends Thread {
                 postRequestHandle(bufferedReader, dos, line);
             }
 
-
-
         } catch (IOException e) {
             log.error(e.getMessage());
         }
@@ -54,17 +54,6 @@ public class RequestHandler extends Thread {
 //            dos.writeBytes("Content-Type: text/html;charset=utf-8\r\n"); //Todo Resource에 맞게 Content-Type 보내기.
             dos.writeBytes("Content-Length: " + lengthOfBodyContent + "\r\n");
             dos.writeBytes("\r\n");
-        } catch (IOException e) {
-            log.error(e.getMessage());
-        }
-    }
-
-    private void response302Header(DataOutputStream dos, String redirectURL) {
-        try {
-            dos.writeBytes("HTTP/1.1 302 Found \r\n");
-            dos.writeBytes("Location: " + redirectURL + "\r\n");
-            dos.writeBytes("\r\n");
-
         } catch (IOException e) {
             log.error(e.getMessage());
         }
@@ -102,7 +91,9 @@ public class RequestHandler extends Thread {
         Map<String, String> userInfoMap = HttpRequestUtils.parseQueryString(data);
         User user = User.getUserInstance(userInfoMap);
         DataBase.addUser(user);
-        response302Header(dos, "/index.html");
+        String response = response302Header("/index.html");
+
+        dos.writeBytes(response);
     }
 
     private void getRequestHandle(BufferedReader bufferedReader, DataOutputStream dos, String resourcePath, String line) throws IOException {
@@ -111,7 +102,9 @@ public class RequestHandler extends Thread {
             Map<String, String> userInfoMap = HttpRequestUtils.parseQueryString(query);
             User user = User.getUserInstance(userInfoMap);
             DataBase.addUser(user);
-            response302Header(dos, "/index.html");
+            String response = response302Header("/index.html");
+
+            dos.writeBytes(response);
             return;
         }
 
