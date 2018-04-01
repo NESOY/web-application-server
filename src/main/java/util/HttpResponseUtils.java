@@ -15,4 +15,15 @@ public class HttpResponseUtils {
 
         return response.toString();
     }
+
+    public static String response200Header(int lengthOfBodyContent) {
+        StringBuilder response = new StringBuilder();
+
+        response.append("HTTP/1.1 200 OK \r\n");
+//            response.append("Content-Type: text/html;charset=utf-8\r\n"); //Todo Resource에 맞게 Content-Type 보내기.
+        response.append("Content-Length: " + lengthOfBodyContent + "\r\n");
+        response.append("\r\n");
+
+        return response.toString();
+    }
 }

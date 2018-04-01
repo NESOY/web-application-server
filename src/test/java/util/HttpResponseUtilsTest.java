@@ -16,4 +16,16 @@ public class HttpResponseUtilsTest {
         //then
         Assert.assertTrue(response.contains(redirectURL));
     }
+
+    @Test
+    public void response200HeaderTest() {
+        //given
+        int contentSize = 50;
+
+        //when
+        String response = HttpResponseUtils.response200Header(contentSize);
+
+        //then
+        Assert.assertTrue(response.contains("Content-Length: " + contentSize + "\r\n"));
+    }
 }

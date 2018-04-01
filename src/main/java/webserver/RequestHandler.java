@@ -12,6 +12,7 @@ import java.net.Socket;
 import java.nio.file.Files;
 import java.util.Map;
 
+import static util.HttpResponseUtils.response200Header;
 import static util.HttpResponseUtils.response302Header;
 
 public class RequestHandler extends Thread {
@@ -43,17 +44,6 @@ public class RequestHandler extends Thread {
                 postRequestHandle(bufferedReader, dos, line);
             }
 
-        } catch (IOException e) {
-            log.error(e.getMessage());
-        }
-    }
-
-    private void response200Header(DataOutputStream dos, int lengthOfBodyContent) {
-        try {
-            dos.writeBytes("HTTP/1.1 200 OK \r\n");
-//            dos.writeBytes("Content-Type: text/html;charset=utf-8\r\n"); //Todo Resource에 맞게 Content-Type 보내기.
-            dos.writeBytes("Content-Length: " + lengthOfBodyContent + "\r\n");
-            dos.writeBytes("\r\n");
         } catch (IOException e) {
             log.error(e.getMessage());
         }
@@ -116,7 +106,8 @@ public class RequestHandler extends Thread {
             line = bufferedReader.readLine();
         }
 
-        response200Header(dos, body.length);
+        String response = response200Header(body.length);
+        dos.writeBytes(response);
         responseBody(dos, body);
     }
 }
