@@ -2,19 +2,21 @@ package webserver;
 
 import controller.UserController;
 import db.DataBase;
-import model.User;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import util.HttpRequestUtils;
+import util.HttpResponseUtils;
 import util.IOUtils;
 
 import java.io.*;
 import java.net.Socket;
 import java.nio.file.Files;
+import java.util.ArrayList;
+import java.util.HashMap;
+import java.util.List;
 import java.util.Map;
 
 import static util.HttpResponseUtils.response200Header;
-import static util.HttpResponseUtils.response302Header;
 
 public class RequestHandler extends Thread {
     private static final Logger log = LoggerFactory.getLogger(RequestHandler.class);
@@ -48,6 +50,18 @@ public class RequestHandler extends Thread {
                     String response = userController.create(userInfoMap);
 
                     dos.writeBytes(response);
+                } else if (resourcePath.equals("/user/list")) {
+                    Map<String, String> headerInfoMap = getHeaderInfoMap(bufferedReader);
+                    Map<String, String> cookieInfoMap = HttpRequestUtils.parseCookies(headerInfoMap.get("Cookie"));
+                    boolean isLogined = Boolean.parseBoolean(cookieInfoMap.get("logined"));
+
+                    if (isLogined) {
+                        String response = HttpResponseUtils.response302Header("/user/list.html");
+                        dos.writeBytes(response);
+                    } else {
+                        String response = HttpResponseUtils.response302Header("/user/login.html");
+                        dos.writeBytes(response);
+                    }
                 } else {
                     getRequestHandle(bufferedReader, dos, resourcePath, line);
                 }
@@ -122,5 +136,18 @@ public class RequestHandler extends Thread {
 
 
         return IOUtils.readData(bufferedReader, size);
+    }
+
+    private Map<String, String> getHeaderInfoMap(BufferedReader bufferedReader) throws IOException {
+        Map<String, String> headerMap = new HashMap();
+        String line = bufferedReader.readLine();
+
+        while (!"".equals(line)) {
+            HttpRequestUtils.Pair header = HttpRequestUtils.parseHeader(line);
+            headerMap.put(header.getKey(), header.getValue());
+            line = bufferedReader.readLine();
+        }
+
+        return headerMap;
     }
 }

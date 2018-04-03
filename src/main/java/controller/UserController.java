@@ -4,13 +4,10 @@ import db.DataBase;
 import model.User;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
-import util.HttpRequestUtils;
 
 import java.util.Map;
 
-import static util.HttpResponseUtils.loginFail;
-import static util.HttpResponseUtils.loginSuccess;
-import static util.HttpResponseUtils.response302Header;
+import static util.HttpResponseUtils.*;
 
 public class UserController {
     private static final Logger log = LoggerFactory.getLogger(UserController.class);
