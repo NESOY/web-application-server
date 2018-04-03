@@ -41,7 +41,16 @@ public class RequestHandler extends Thread {
             String resourcePath = HttpRequestUtils.parseResourcePath(line);
 
             if (method.equals("GET")) {
-                getRequestHandle(bufferedReader, dos, resourcePath, line);
+                if (resourcePath.equals("/user/create")) {
+                    String query = HttpRequestUtils.parseQuery(line);
+                    Map<String, String> userInfoMap = HttpRequestUtils.parseQueryString(query);
+
+                    String response = userController.create(userInfoMap);
+
+                    dos.writeBytes(response);
+                } else {
+                    getRequestHandle(bufferedReader, dos, resourcePath, line);
+                }
             }
             if (method.equals("POST")) {
                 if (resourcePath.equals("/user/create")) {
@@ -79,19 +88,7 @@ public class RequestHandler extends Thread {
         }
     }
 
-
     private void getRequestHandle(BufferedReader bufferedReader, DataOutputStream dos, String resourcePath, String line) throws IOException {
-        if (resourcePath.equals("/user/create")) {
-            String query = HttpRequestUtils.parseQuery(line);
-            Map<String, String> userInfoMap = HttpRequestUtils.parseQueryString(query);
-            User user = User.getUserInstance(userInfoMap);
-            DataBase.addUser(user);
-            String response = response302Header("/index.html");
-
-            dos.writeBytes(response);
-            return;
-        }
-
         byte[] body = Files.readAllBytes(new File(BASE_RESOURCE_URL + resourcePath).toPath());
         while (!"".equals(line)) {
             if (line == null) {
