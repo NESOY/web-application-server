@@ -1,7 +1,6 @@
 package webserver;
 
 import controller.UserController;
-import db.DataBase;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import util.HttpRequestUtils;
@@ -11,143 +10,155 @@ import util.IOUtils;
 import java.io.*;
 import java.net.Socket;
 import java.nio.file.Files;
-import java.util.ArrayList;
 import java.util.HashMap;
-import java.util.List;
 import java.util.Map;
 
 import static util.HttpResponseUtils.response200Header;
 
 public class RequestHandler extends Thread {
-    private static final Logger log = LoggerFactory.getLogger(RequestHandler.class);
-    private static final String BASE_RESOURCE_URL = "./webapp";
+	private static final Logger log = LoggerFactory.getLogger(RequestHandler.class);
+	private static final String BASE_RESOURCE_URL = "./webapp";
 
-    private Socket connection;
+	private Socket connection;
 
-    private UserController userController = new UserController();
+	private UserController userController = new UserController();
 
-    public RequestHandler(Socket connectionSocket) {
-        this.connection = connectionSocket;
-    }
+	public RequestHandler(Socket connectionSocket) {
+		this.connection = connectionSocket;
+	}
 
-    public void run() {
-        log.debug("New Client Connect! Connected IP : {}, Port : {}", connection.getInetAddress(), connection.getPort());
+	public void run() {
+		log.debug("New Client Connect! Connected IP : {}, Port : {}", connection.getInetAddress(), connection.getPort());
 
-        try (InputStream in = connection.getInputStream(); OutputStream out = connection.getOutputStream()) {
-            BufferedReader bufferedReader = new BufferedReader(new InputStreamReader(in));
-            DataOutputStream dos = new DataOutputStream(out);
+		try (InputStream in = connection.getInputStream(); OutputStream out = connection.getOutputStream()) {
+			BufferedReader bufferedReader = new BufferedReader(new InputStreamReader(in));
+			DataOutputStream dos = new DataOutputStream(out);
 
-            String line = bufferedReader.readLine();
+			String line = bufferedReader.readLine();
 
-            String method = HttpRequestUtils.parseMethod(line);
-            String resourcePath = HttpRequestUtils.parseResourcePath(line);
+			String method = HttpRequestUtils.parseMethod(line);
+			String resourcePath = HttpRequestUtils.parseResourcePath(line);
 
-            if (method.equals("GET")) {
-                if (resourcePath.equals("/user/create")) {
-                    String query = HttpRequestUtils.parseQuery(line);
-                    Map<String, String> userInfoMap = HttpRequestUtils.parseQueryString(query);
+			if (method.equals("GET")) {
+				routeGetMapping(resourcePath, line, bufferedReader, dos);
+			}
+			if (method.equals("POST")) {
+				routePostMapping(resourcePath, line, bufferedReader, dos);
+			}
 
-                    String response = userController.create(userInfoMap);
+		} catch (IOException e) {
+			log.error(e.getMessage());
+		}
+	}
 
-                    dos.writeBytes(response);
-                } else if (resourcePath.equals("/user/list")) {
-                    Map<String, String> headerInfoMap = getHeaderInfoMap(bufferedReader);
-                    Map<String, String> cookieInfoMap = HttpRequestUtils.parseCookies(headerInfoMap.get("Cookie"));
-                    boolean isLogined = Boolean.parseBoolean(cookieInfoMap.get("logined"));
+	private void responseBody(DataOutputStream dos, byte[] body) {
+		try {
+			dos.write(body, 0, body.length);
+			dos.flush();
+		} catch (IOException e) {
+			log.error(e.getMessage());
+		}
+	}
 
-                    if (isLogined) {
-                        String response = HttpResponseUtils.response302Header("/user/list.html");
-                        dos.writeBytes(response);
-                    } else {
-                        String response = HttpResponseUtils.response302Header("/user/login.html");
-                        dos.writeBytes(response);
-                    }
-                } else {
-                    getRequestHandle(bufferedReader, dos, resourcePath, line);
-                }
-            }
-            if (method.equals("POST")) {
-                if (resourcePath.equals("/user/create")) {
-                    String data = getPostQueryString(bufferedReader, line);
-                    Map<String, String> userInfoMap = HttpRequestUtils.parseQueryString(data);
+	private void getRequestHandle(BufferedReader bufferedReader, DataOutputStream dos, String resourcePath, String line) throws IOException {
+		byte[] body = Files.readAllBytes(new File(BASE_RESOURCE_URL + resourcePath).toPath());
+		while (!"".equals(line)) {
+			if (line == null) {
+				return;
+			}
+			line = bufferedReader.readLine();
+		}
 
-                    String response = userController.create(userInfoMap);
+		String response = response200Header(body.length);
+		dos.writeBytes(response);
+		responseBody(dos, body);
+	}
 
-                    dos.writeBytes(response);
-                }
+	private String getPostQueryString(BufferedReader bufferedReader, String line) throws IOException {
+		int size = 0;
+		while (!"".equals(line)) {
+			if (line == null) {
+				return "";
+			}
 
-                if (resourcePath.equals("/user/login")) {
-                    String data = getPostQueryString(bufferedReader, line);
-                    Map<String, String> userLoginInfo = HttpRequestUtils.parseQueryString(data);
-                    String userId = userLoginInfo.get("userId");
-                    String password = userLoginInfo.get("password");
+			HttpRequestUtils.Pair pair = HttpRequestUtils.parseHeader(line);
+			if (pair != null) {
+				if (pair.getKey().equals("Content-Length")) {
+					size = Integer.parseInt(pair.getValue());
 
-                    String response = userController.login(userId, password);
+				}
+			}
 
-                    dos.writeBytes(response);
-                }
-            }
+			line = bufferedReader.readLine();
+		}
 
-        } catch (IOException e) {
-            log.error(e.getMessage());
-        }
-    }
+		return IOUtils.readData(bufferedReader, size);
+	}
 
-    private void responseBody(DataOutputStream dos, byte[] body) {
-        try {
-            dos.write(body, 0, body.length);
-            dos.flush();
-        } catch (IOException e) {
-            log.error(e.getMessage());
-        }
-    }
+	private Map<String, String> getHeaderInfoMap(BufferedReader bufferedReader) throws IOException {
+		Map<String, String> headerMap = new HashMap();
+		String line = bufferedReader.readLine();
 
-    private void getRequestHandle(BufferedReader bufferedReader, DataOutputStream dos, String resourcePath, String line) throws IOException {
-        byte[] body = Files.readAllBytes(new File(BASE_RESOURCE_URL + resourcePath).toPath());
-        while (!"".equals(line)) {
-            if (line == null) {
-                return;
-            }
-            line = bufferedReader.readLine();
-        }
+		while (!"".equals(line)) {
+			HttpRequestUtils.Pair header = HttpRequestUtils.parseHeader(line);
+			headerMap.put(header.getKey(), header.getValue());
+			line = bufferedReader.readLine();
+		}
 
-        String response = response200Header(body.length);
-        dos.writeBytes(response);
-        responseBody(dos, body);
-    }
+		return headerMap;
+	}
 
-    private String getPostQueryString(BufferedReader bufferedReader, String line) throws IOException {
-        int size = 0;
-        while (!"".equals(line)) {
-            if (line == null) {
-                return "";
-            }
+	private void routeGetMapping(String resourcePath, String line, BufferedReader bufferedReader, DataOutputStream dos) throws IOException {
+		if (resourcePath.equals("/user/create")) {
+			String query = HttpRequestUtils.parseQuery(line);
+			Map<String, String> userInfoMap = HttpRequestUtils.parseQueryString(query);
 
-            HttpRequestUtils.Pair pair = HttpRequestUtils.parseHeader(line);
-            if (pair != null) {
-                if (pair.getKey().equals("Content-Length")) {
-                    size = Integer.parseInt(pair.getValue());
+			String response = userController.create(userInfoMap);
 
-                }
-            }
+			dos.writeBytes(response);
+			return;
+		}
 
-            line = bufferedReader.readLine();
-        }
+		if (resourcePath.equals("/user/list")) {
+			Map<String, String> headerInfoMap = getHeaderInfoMap(bufferedReader);
+			Map<String, String> cookieInfoMap = HttpRequestUtils.parseCookies(headerInfoMap.get("Cookie"));
+			boolean isLogined = Boolean.parseBoolean(cookieInfoMap.get("logined"));
 
+			if (isLogined) {
+				String response = HttpResponseUtils.response302Header("/user/list.html");
+				dos.writeBytes(response);
+				return;
+			}
 
-        return IOUtils.readData(bufferedReader, size);
-    }
+			String response = HttpResponseUtils.response302Header("/user/login.html");
+			dos.writeBytes(response);
+			return;
+		}
 
-    private Map<String, String> getHeaderInfoMap(BufferedReader bufferedReader) throws IOException {
-        Map<String, String> headerMap = new HashMap();
-        String line = bufferedReader.readLine();
+		getRequestHandle(bufferedReader, dos, resourcePath, line);
+	}
 
-        while (!"".equals(line)) {
-            HttpRequestUtils.Pair header = HttpRequestUtils.parseHeader(line);
-            headerMap.put(header.getKey(), header.getValue());
-            line = bufferedReader.readLine();
-        }
+	private void routePostMapping(String resourcePath, String line, BufferedReader bufferedReader, DataOutputStream dos) throws IOException {
+		if (resourcePath.equals("/user/create")) {
+			String data = getPostQueryString(bufferedReader, line);
+			Map<String, String> userInfoMap = HttpRequestUtils.parseQueryString(data);
 
-        return headerMap;
-    }
+			String response = userController.create(userInfoMap);
+
+			dos.writeBytes(response);
+			return;
+		}
+
+		if (resourcePath.equals("/user/login")) {
+			String data = getPostQueryString(bufferedReader, line);
+			Map<String, String> userLoginInfo = HttpRequestUtils.parseQueryString(data);
+			String userId = userLoginInfo.get("userId");
+			String password = userLoginInfo.get("password");
+
+			String response = userController.login(userId, password);
+
+			dos.writeBytes(response);
+			return;
+		}
+	}
 }
