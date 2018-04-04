@@ -69,7 +69,7 @@ public class RequestHandler extends Thread {
 			line = bufferedReader.readLine();
 		}
 
-		String response = response200Header(body.length);
+		String response = response200Header(resourcePath, body.length);
 		dos.writeBytes(response);
 		responseBody(dos, body);
 	}
